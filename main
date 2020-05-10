@@ -1,0 +1,276 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Scanner;
+import java.util.Set;
+
+
+public class Main {
+	static Integer[] CONTRACTF = {5,7,6};
+	static Integer[] CONTRACTT = {3,3,4};
+	static int[] MAPS = null;
+	
+	public static void main(String[] args) {
+		//printEdgeWeights(myGraph());
+		//printEdgeWeights(contract(),MAPS);
+		contract();
+	}
+	
+	
+	//contracts a graph as shown in the presentation
+	public static int[][] contract() {
+		
+		if(CONTRACTF.length != CONTRACTT.length) {
+			System.out.println("length doesn't match");
+			throw new IllegalStateException();
+		}
+		
+		ArrayList<Integer> contractFrom = new ArrayList<Integer>(Arrays.asList(CONTRACTF));
+		ArrayList<Integer> contractTo = new ArrayList<Integer>(Arrays.asList(CONTRACTT));
+		
+		int length = CONTRACTF.length;
+		for(int i=0;i<CONTRACTF.length;i++) { //0-Indexed
+			contractFrom.set(i, contractFrom.get(i)-1);
+			contractTo.set(i, contractTo.get(i)-1);
+		}
+		
+		//System.out.println(contractFrom);
+		//System.out.println(contractTo);
+		
+		int[] mapping = new int[10]; //where each node maps to
+		for(int i=0;i<mapping.length;i++) {
+			mapping[i]=i;
+			if(contractFrom.contains((Integer) i)){
+				mapping[i]=contractTo.get(contractFrom.indexOf((Integer) i));
+			}
+		}
+		
+		int[] origMapping = Arrays.copyOf(mapping, mapping.length);
+		
+		//System.out.println(Arrays.toString(mapping));
+		
+		for(int i=0; i<contractFrom.size(); i++) {
+			int curr = contractFrom.get(i);
+			for(int j=0; j<mapping.length; j++) {
+				if(origMapping[j]==curr) {
+					throw new IllegalStateException("Misconfigured CONTRACTF/CONTRACTT");
+				}
+				if(origMapping[j]>curr) {
+					mapping[j]--;
+				}
+			}
+		}
+		
+		MAPS = mapping;
+		System.out.println("Mapping: "+Arrays.toString(mapping));
+		
+		int[][] res = new int[10-length][10-length];
+		for (int i = 0; i < res.length; i++) {
+			Arrays.fill(res[i], Integer.MAX_VALUE);
+		}
+		
+		
+		int[][] origGraph = myGraph();
+		for (int i = 0; i < origGraph.length; i++) {
+			for (int j = 0; j < origGraph.length; j++) {
+				int ip = mapsTo(i);
+				int jp = mapsTo(j);
+				if(i==j) {
+					res[ip][jp]=0;
+					continue;
+				}
+
+				res[ip][jp] = Math.min(res[ip][jp], origGraph[i][j]);
+			}
+		}
+		
+		System.out.println("\nOriginal Graph Matrix:");
+		for (int i = 0; i < myGraph().length; i++) {
+			System.out.println(Arrays.toString(myGraph()[i]));
+		}
+		
+		System.out.println("\nContracted Graph Matrix:");
+		for (int i = 0; i < res.length; i++) {
+			System.out.println(Arrays.toString(res[i]));
+		}
+		
+		//outputs different format needed for Dreyfus-Wagner-Implementation linked on handout
+		//System.out.println();
+		for (int i = 0; i < res.length; i++) {
+			for (int j = i+1; j < res.length; j++) {
+				//System.out.println("e "+(i+1)+" "+(j+1)+" "+res[i][j]);
+			}
+		}
+		
+		return res;
+	}
+	
+	//gives mapping for graph contraction
+	private static int mapsTo(int in) {
+		return MAPS[in];
+	}
+	
+	//standard contains for an array
+	public static boolean contains(int x, int[] arr) {
+		for (int i = 0; i < arr.length; i++) {
+			if(arr[i]==x){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	//prints edge weights for given Graph G, 1-indexed
+	static void printEdgeWeights(int[][] G) {
+		int[][] mat = G;
+		Scanner in = new Scanner(System.in);
+		while(true) {
+			int a = in.nextInt();
+			if(a==-1){
+				in.close();
+				return;
+			}
+			a = a - 1;
+			int b = in.nextInt() - 1;
+			System.out.println(mat[a][b]);
+		}
+	}
+	
+	//prints edge weights for given contracted Graph G (edges indexed by original indices, 1-Indexed).
+	static void printEdgeWeights(int[][] G, int[] mapping) {
+		int[][] mat = G;
+		Scanner in = new Scanner(System.in);
+		while(true) {
+			int a = in.nextInt();
+			if(a==-1){
+				in.close();
+				return;
+			}
+			a = a - 1;
+			int b = in.nextInt() - 1;
+			a = mapping[a];
+			b = mapping[b];
+			System.out.println(mat[a][b]);
+		}
+	}
+
+	//returns hard-coded example graph, originally generated with generateGraph()
+	static int[][] myGraph(){
+		int[][] mat = 
+			{{0,	154,	119,	144,	98,		123,	95,		106,	176,	92},
+					{154,	0,		87,		122,	66,		97,		69,		55,		144,	72},
+					{119,	87,		0,		48,		21,		52,		24,		82,		99,		27},
+					{144,	122,	48,		0,		56,		25,		53,		111,	92,		56},
+					{98,	66,		21,		56,		0,		31,		3,		61,		78,		6},
+					{123,	97,		52,		25,		31,		0,		28,		86,		109,	31},
+					{95,	69,		24,		53,		3,		28,		0,		58,		81,		3},
+					{106,	55,		82,		111,	61,		86,		58,		0,		139,	61},
+					{176,	144,	99,		92,		78,		109,	81,		139,	0,		84},
+					{92,	72,		27,		56,		6,		31,		3,		61,		84,		0}};
+
+
+		return mat;
+	}
+
+	//checks if adjacency matrix is symmetric, as it should if the graph is undirected
+	static boolean checkIntegrity(int[][] mat) {
+		for (int i = 0; i < mat.length; i++) {
+			for (int j = 0; j < mat.length; j++) {
+				if(mat[i][j]!=mat[j][i]) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	//generates a metric graph. Was used to generate the data for myGraph()
+	static void generateGraph() {
+		Scanner in = new Scanner(System.in);
+		int N = 10;
+		int max = 200; 
+
+		int[][] matrix = new int[N][N];
+
+		for(int i=0; i<N;i++) {
+			for (int j = i; j < N; j++) {
+				if(i!=j) {
+					matrix[i][j] = (int) (Math.random()*max+1);
+				} else {
+					matrix[i][j] = -1;
+				}
+			}
+		}
+		for(int i=0; i<N;i++) {
+			for (int j = 0; j < i; j++) {
+				matrix[i][j] = matrix[j][i];
+			}
+		}
+
+
+		boolean change = true;
+		while (change) {
+			change = false;
+			for(int i=0; i<N;i++) {
+				for (int j = 0; j < N; j++) {
+					for (int k = 0; k < N; k++) {
+						if(i!=j && i!=k && j!=k) {
+							int c = matrix[i][j]+matrix[j][k];
+							if(c<matrix[i][k]) {
+								matrix[i][k]=c;
+								matrix[k][i]=c;
+								change = true;
+								//System.out.println("changed!");
+							}
+						}
+					}
+				}
+			}
+		}
+		for(int i=0; i<N;i++) {
+			for (int j = 0; j < N; j++) {
+				for (int k = 0; k < N; k++) {
+					if(i!=j && i!=k && j!=k) {
+						int c = matrix[i][j]+matrix[j][k];
+						if(c<matrix[i][k]) {
+							System.out.print("e "+(i+1)+" "+(j+1)+" "+matrix[i][j]);
+						}
+					}
+				}
+			}
+		}
+
+
+
+		for(int i=0; i<N; i++) {
+			System.out.println(Arrays.toString(matrix[i]));
+		}
+
+		for (int i = 0; i < N; i++) {
+			for (int j = i+1; j < N; j++) {
+				System.out.println("e "+(i+1)+" "+(j+1)+" "+matrix[i][j]);
+			}
+		}
+	}
+
+}
+
+
+
+//Helper class
+class Edge {
+	int x;
+	int y;
+	int c;
+
+	public Edge(int x, int y, int c) {
+		this.x = x;
+		this.y = y;
+		this.c = c;
+	}
+
+	@Override
+	public String toString() {
+		return "("+x+","+y+","+x+")";
+	}
+
+}
